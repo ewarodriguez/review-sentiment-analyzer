@@ -8,11 +8,11 @@ An interactive **Streamlit** web application designed to evaluate and audit Engl
 
 For testing, you may refer to this sample dataset based on global gaming community telemetry data:
 
-*   **Target Application Context**: User feedback, reviews, and community critiques mapping to the award-winning Action RPG **Elden Ring**.
-*   **Multilingual Footprint**: Includes global marketplace feedback tracking across multiple source languages, including **English, Italian (italiano), French (français), Spanish (español), and German (Deutsch)**.
-*   **Data Provenance & Engine Retrieval**: All data payloads were fetched via automated streaming requests utilizing the official [Steam Web API GET Reviews Documentation Platform](https://partner.steamgames.com/doc/store/getreviews).
+*   **Target Application Context**: User feedback and reviews. 
 
 ### 📥 Access the Repository Test Set
+For testing, you may use the sample dataset containing reviews for award-winning Action RPG **Elden Ring**
+
 The comprehensive open-source review matrix can be explored, audited, and downloaded natively from Kaggle:
 👉 **[Steam Reviews of Elden Ring on Kaggle](https://www.kaggle.com/datasets/lorenzoshylockl/steam-reviews-of-elden-ring)**
 
