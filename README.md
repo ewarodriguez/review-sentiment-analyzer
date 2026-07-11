@@ -1,15 +1,11 @@
 # 📊 Multi-Engine Review Sentiment Analyzer 
 
-An interactive **Streamlit** web application designed to evaluate and audit English text sentiment dynamically using **VADER** and **TextBlob** evaluation engines. This application provides dual computational pipelines for isolated sandboxing and industrial-scale bulk file processing.
+An interactive **Streamlit** web application designed to evaluate and audit English text dynamically using **VADER** and **TextBlob** evaluation engines. This application provides dual computational pipelines for isolated sandboxing and industrial-scale bulk file processing.
 
+**Target Application Context**: User feedback and reviews. 
 ---
 
 ## Dataset
-
-For testing, you may refer to this sample dataset based on global gaming community telemetry data:
-
-*   **Target Application Context**: User feedback and reviews. 
-
 ### 📥 Access the Repository Test Set
 For testing, you may use the sample dataset containing reviews for award-winning Action RPG **Elden Ring**
 
