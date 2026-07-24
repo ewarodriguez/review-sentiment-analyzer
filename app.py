@@ -97,25 +97,31 @@ if analysis_mode == "Single Text Sandbox":
             else:
                 st.info(f"**Result:** {label} (Polarity Score: {score:.2f})")
 
-
 # --- MODE 2: BULK FILE UPLOAD ---
 else:
     st.subheader("📁 Bulk File Upload")
     uploaded_file = st.file_uploader("Upload a CSV or Excel file containing text data", type=["csv", "xlsx"])
     
     if uploaded_file is not None:
-        # Read file safely
+        # Read file safely depending on format
         if uploaded_file.name.endswith('.csv'):
-            raw_df = pd.read_csv(uploaded_file)
+            # Fixes DtypeWarning and allows consistent dynamic casting
+            raw_df = pd.read_csv(uploaded_file, low_memory=False)
         else:
             raw_df = pd.read_excel(uploaded_file)
 
         # FIX 1: Turn whitespace-only fields into true NaNs across the entire file
         raw_df = raw_df.replace(r'^\s*$', np.nan, regex=True)
         
-        # FIX: Drop rows where ALL columns are completely empty/NaN
+        # FIX 2: Drop rows where ALL columns are completely empty/NaN
         raw_df = raw_df.dropna(how='all').reset_index(drop=True)
-            
+
+        # FIX 3: Dynamic type casting to prevent PyArrow and Streamlit dataframe crashes
+        for col in raw_df.columns:
+            if raw_df[col].dtype == "object":
+                # Converts mixed datetimes/numbers/NaNs into pure string data
+                raw_df[col] = raw_df[col].fillna("").astype(str)
+
         # --- NEW: DATA SET PREVIEW MODULE ---
         with st.expander("👀 Preview Uploaded Dataset", expanded=True):
             max_rows = len(raw_df)
@@ -127,21 +133,122 @@ else:
                 value=min(5, max_rows), 
                 step=1
             )
-            st.dataframe(raw_df.head(preview_rows), use_container_width=True)
+            st.dataframe(raw_df.head(preview_rows), width='stretch')
             st.caption(f"Showing top {preview_rows} of {max_rows:,} total rows.")
             
         # Let user choose which column contains the text
         text_column = st.selectbox("Select the column containing the text data:", raw_df.columns)
         
-        # Initialize session state to save data across page redraws
+        # Initialize session state tracking variables safely
         if "processed_df" not in st.session_state:
             st.session_state.processed_df = None
+        if "blanks_df" not in st.session_state:
+            st.session_state.blanks_df = None
+        if "dataset_processed_clicked" not in st.session_state:
+            st.session_state.dataset_processed_clicked = False
+
+        # RESET TRIPPERS: Wipe out stale records and turn off active switch when a new file lands
         if "last_uploaded_file" not in st.session_state or st.session_state.last_uploaded_file != uploaded_file.name:
             st.session_state.processed_df = None
+            st.session_state.blanks_df = None
+            st.session_state.dataset_processed_clicked = False
             st.session_state.last_uploaded_file = uploaded_file.name
 
+        # # --- OPTIMIZED BATCH PROCESSING WITH BLANK EXTRACTION ---
+        # # Evaluate primary button trigger OR preserve open status via the verified click state flag
+        # if st.button("Process Dataset", type="primary") or st.session_state.dataset_processed_clicked:
+        #     st.session_state.dataset_processed_clicked = True
+
+        #     # FIX: Normalize text and explicitly catch 'nan' strings alongside placeholders
+        #     clean_series = raw_df[text_column].astype(str).str.strip().str.lower()
+
+        #     # 1. Identify rows where the text column is blank, NaN, or just whitespace
+        #     is_blank_mask = (
+        #         raw_df[text_column].isna() | 
+        #         (clean_series == "") |
+        #         clean_series.isin(["na", "n/a", "null","nan"]) |
+        #         clean_series.str.startswith("#")  # Catches #NAME?, #VALUE!, etc.
+        #         )
+            
+        #     # 2. Split into two separate DataFrames
+        #     blanks_df = raw_df[is_blank_mask].reset_index(drop=True)
+        #     df_clean = raw_df[~is_blank_mask].reset_index(drop=True)
+            
+        #     # Save the blanks dataframe to session state so you can use it elsewhere
+        #     st.session_state.blanks_df = blanks_df
+            
+        #     total_docs = len(df_clean)
+        #     total_blanks = len(blanks_df)
+            
+        #     if total_docs == 0:
+        #         st.warning("The selected column has no valid text data to process.")
+        #         if total_blanks > 0:
+        #             st.info(f"Found {total_blanks} completely blank/invalid rows.")
+        #             st.dataframe(blanks_df, width='stretch')
+        #     else:
+        #         # Inform the user immediately about the split distribution and add an interactive preview counter
+        #         if total_blanks > 0:
+        #             st.warning(f"📊 Found {total_blanks} blank/invalid rows. Moving them to a separate isolated dataframe to protect model accuracy.")
+        #             with st.expander(f"👀 Quick View Isolated Blanks (Total: {total_blanks})", expanded=False):
+        #                 blank_preview_rows = st.number_input(
+        #                     "Rows of blank data to preview:", 
+        #                     min_value=1, 
+        #                     max_value=total_blanks, 
+        #                     value=min(10, total_blanks), 
+        #                     key="process_blank_preview_counter"
+        #                 )
+        #                 # FIXED: Reads directly from stored state array to guarantee interface stability
+        #                 st.dataframe(st.session_state.blanks_df.head(blank_preview_rows), width='stretch')
+
+        #         progress_bar = st.progress(0)
+        #         status_text = st.empty()
+                
+        #         text_data = df_clean[text_column].astype(str).tolist()
+        #         all_labels, all_scores = [], []
+                
+        #         batch_size = 2000
+        #         num_batches = int(np.ceil(total_docs / batch_size))
+                
+        #         # GUARD RAIL: Run heavy iteration sequence only if cached array evaluation returns clean
+        #         if st.session_state.processed_df is None:
+        #             for i in range(num_batches):
+        #                 batch = text_data[i*batch_size : (i+1)*batch_size]
+        #                 for text in batch:
+        #                     label, score = get_sentiment(text, engine_choice)
+        #                     all_labels.append(label)
+        #                     all_scores.append(score)
+                        
+        #                 progress_bar.progress((i + 1) / num_batches)
+        #                 status_text.text(f"Processed {min((i+1)*batch_size, total_docs)} of {total_docs} valid text rows...")
+                    
+        #             df_clean['Sentiment_Label'] = all_labels
+        #             df_clean['Sentiment_Score'] = all_scores
+        #             st.session_state.processed_df = df_clean
+                
+        #         progress_bar.empty()
+        #         status_text.empty()
+
+        # --- NEW: CLEAR BULK ANALYSIS CALLBACK ---
+        def clear_bulk_analysis():
+            st.session_state.processed_df = None
+            st.session_state.blanks_df = None
+            st.session_state.dataset_processed_clicked = False
+            # Clear the number input key if it was created
+            if "process_blank_preview_counter" in st.session_state:
+                del st.session_state["process_blank_preview_counter"]
+
+        # --- NEW: ACTION BUTTONS IN COLUMNS ---
+        bulk_col1, bulk_col2 = st.columns([1, 10])
+        
+        with bulk_col1:
+            process_btn = st.button("Process Dataset", type="primary")
+        with bulk_col2:
+            st.button("Clear Processing", type="secondary", on_click=clear_bulk_analysis)
+
         # --- OPTIMIZED BATCH PROCESSING WITH BLANK EXTRACTION ---
-        if st.button("Process Dataset", type="primary"):
+        # Evaluate primary button trigger OR preserve open status via the verified click state flag
+        if process_btn or st.session_state.dataset_processed_clicked:
+            st.session_state.dataset_processed_clicked = True
 
             # FIX: Normalize text and explicitly catch 'nan' strings alongside placeholders
             clean_series = raw_df[text_column].astype(str).str.strip().str.lower()
@@ -153,7 +260,6 @@ else:
                 clean_series.isin(["na", "n/a", "null","nan"]) |
                 clean_series.str.startswith("#")  # Catches #NAME?, #VALUE!, etc.
                 )
-            
             
             # 2. Split into two separate DataFrames
             blanks_df = raw_df[is_blank_mask].reset_index(drop=True)
@@ -169,7 +275,7 @@ else:
                 st.warning("The selected column has no valid text data to process.")
                 if total_blanks > 0:
                     st.info(f"Found {total_blanks} completely blank/invalid rows.")
-                    st.dataframe(blanks_df, use_container_width=True)
+                    st.dataframe(blanks_df, width='stretch')
             else:
                 # Inform the user immediately about the split distribution and add an interactive preview counter
                 if total_blanks > 0:
@@ -182,7 +288,8 @@ else:
                             value=min(10, total_blanks), 
                             key="process_blank_preview_counter"
                         )
-                        st.dataframe(blanks_df.head(blank_preview_rows), use_container_width=True)
+                        # FIXED: Reads directly from stored state array to guarantee interface stability
+                        st.dataframe(st.session_state.blanks_df.head(blank_preview_rows), width='stretch')
 
                 progress_bar = st.progress(0)
                 status_text = st.empty()
@@ -193,22 +300,24 @@ else:
                 batch_size = 2000
                 num_batches = int(np.ceil(total_docs / batch_size))
                 
-                for i in range(num_batches):
-                    batch = text_data[i*batch_size : (i+1)*batch_size]
-                    for text in batch:
-                        label, score = get_sentiment(text, engine_choice)
-                        all_labels.append(label)
-                        all_scores.append(score)
+                # GUARD RAIL: Run heavy iteration sequence only if cached array evaluation returns clean
+                if st.session_state.processed_df is None:
+                    for i in range(num_batches):
+                        batch = text_data[i*batch_size : (i+1)*batch_size]
+                        for text in batch:
+                            label, score = get_sentiment(text, engine_choice)
+                            all_labels.append(label)
+                            all_scores.append(score)
+                        
+                        progress_bar.progress((i + 1) / num_batches)
+                        status_text.text(f"Processed {min((i+1)*batch_size, total_docs)} of {total_docs} valid text rows...")
                     
-                    progress_bar.progress((i + 1) / num_batches)
-                    status_text.text(f"Processed {min((i+1)*batch_size, total_docs)} of {total_docs} valid text rows...")
+                    df_clean['Sentiment_Label'] = all_labels
+                    df_clean['Sentiment_Score'] = all_scores
+                    st.session_state.processed_df = df_clean
                 
                 progress_bar.empty()
                 status_text.empty()
-                
-                df_clean['Sentiment_Label'] = all_labels
-                df_clean['Sentiment_Score'] = all_scores
-                st.session_state.processed_df = df_clean
 
 
         # Load metrics, plots, and data explorer only if data is processed
@@ -253,7 +362,6 @@ else:
             row2_col2.metric("Rows with NEGATIVE Sentiment", f"{neg_count:,}")
             row2_col3.metric("Rows with NEUTRAL Sentiment", f"{neu_count:,}")
 
-
             # 2. Main High-Level Visualizations
             st.markdown("### 📊 Distribution Plots")
             chart_col1, chart_col2 = st.columns(2)
@@ -262,14 +370,14 @@ else:
                 fig_pie = px.pie(df, names='Sentiment_Label', title='Overall Sentiment Breakdown',
                                  color='Sentiment_Label', 
                                  color_discrete_map={'Positive':'#2ecc71', 'Negative':'#e74c3c', 'Neutral':'#f1c40f'})
-                st.plotly_chart(fig_pie, use_container_width=True)
+                st.plotly_chart(fig_pie, width='stretch')
                 
             with chart_col2:
                 fig_hist = px.histogram(df, x='Sentiment_Score', nbins=20, 
                                         title='Detailed Sentiment Polarity Spread',
                                         labels={'Sentiment_Score': 'Polarity Rating (-1 to +1)'},
                                         color_discrete_sequence=['#3498db'])
-                st.plotly_chart(fig_hist, use_container_width=True)
+                st.plotly_chart(fig_hist, width='stretch')
 
             # 3. Text and Topic Insights (Side-by-Side Wordclouds)
             st.markdown("### ☁️ Theme Wordclouds")
@@ -278,26 +386,43 @@ else:
             neg_words = " ".join(df[df['Sentiment_Label'] == 'Negative'][text_column].astype(str))
             
             wc_col1, wc_col2 = st.columns(2)
-            
+
             with wc_col1:
                 st.write("**Positive Themes**")
                 if len(pos_words.strip()) > 0:
-                    wc_pos = WordCloud(width=400, height=250, background_color='white', colormap='Greens').generate(pos_words)
-                    fig, ax = plt.subplots()
-                    ax.imshow(wc_pos, interpolation='bilinear')
-                    ax.axis('off')
-                    st.pyplot(fig)
-                    plt.close()
+                    wc_pos = WordCloud(width=400, height=250, background_color='white', colormap='Greens')
+                    pos_frequencies = wc_pos.process_text(pos_words)
+                    
+                    if len(pos_frequencies) > 0:
+                        wc_pos.generate_from_frequencies(pos_frequencies)
+                        fig, ax = plt.subplots()
+                        ax.imshow(wc_pos, interpolation='bilinear')
+                        ax.axis('off')
+                        st.pyplot(fig)
+                        plt.close()
+                    else:
+                        st.info("No meaningful words left after filtering stop words.")
+                else:
+                    st.info("No positive words detected.")
                     
             with wc_col2:
                 st.write("**Negative Themes**")
                 if len(neg_words.strip()) > 0:
-                    wc_neg = WordCloud(width=400, height=250, background_color='white', colormap='Reds').generate(neg_words)
-                    fig, ax = plt.subplots()
-                    ax.imshow(wc_neg, interpolation='bilinear')
-                    ax.axis('off')
-                    st.pyplot(fig)
-                    plt.close()
+                    wc_neg = WordCloud(width=400, height=250, background_color='white', colormap='Reds')
+                    neg_frequencies = wc_neg.process_text(neg_words)
+                    
+                    if len(neg_frequencies) > 0:
+                        wc_neg.generate_from_frequencies(neg_frequencies)
+                        fig, ax = plt.subplots()
+                        ax.imshow(wc_neg, interpolation='bilinear')
+                        ax.axis('off')
+                        st.pyplot(fig)
+                        plt.close()
+                    else:
+                        st.info("No meaningful words left after filtering stop words.")
+                else:
+                    st.info("No negative words detected.")
+
 
             # 4. Interactive Filtered Raw Data Explorer
             st.markdown("### 🔍 Raw Data Audit Trail")
@@ -322,11 +447,11 @@ else:
                 filtered_df = filtered_df[filtered_df[text_column].astype(str).str.contains(search_query, case=False, na=False)]
 
             st.caption(f"Showing {len(filtered_df):,} of {len(df):,} records")
-            st.dataframe(filtered_df[[text_column, 'Sentiment_Label', 'Sentiment_Score']], use_container_width=True)
+            st.dataframe(filtered_df[[text_column, 'Sentiment_Label', 'Sentiment_Score']], width='stretch')
 
             # # 4. Interactive Raw Data Explorer
             # st.markdown("### 🔍 Raw Data Audit Trail")
-            # st.dataframe(df[[text_column, 'Sentiment_Label', 'Sentiment_Score']], use_container_width=True)
+            # st.dataframe(df[[text_column, 'Sentiment_Label', 'Sentiment_Score']], width='stretch')
 
 
 
