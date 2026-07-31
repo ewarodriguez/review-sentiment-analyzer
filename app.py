@@ -1,9 +1,12 @@
+import os
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
+from transformers import pipeline
+import time # Required to flush the UI thread
 
 # 1. Import Sentiment Libraries
 from textblob import TextBlob
@@ -11,6 +14,33 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 # Initialize VADER analyzer
 vader_analyzer = SentimentIntensityAnalyzer()
+
+# Define a stable local model cache directory within your project for the Transformer
+MODEL_CACHE_DIR = "local_transformer_cache"
+os.makedirs(MODEL_CACHE_DIR, exist_ok=True)
+
+# ----------------------------------------------------
+# 2. Specialized Transformer Initialization
+# ----------------------------------------------------
+@st.cache_resource
+def load_transformer_pipeline():
+    """
+    Downloads and caches the RoBERTa model to a local directory.
+    Subsequent runs will load instantly from disk completely offline.
+    """
+    model_name = "cardiffnlp/twitter-roberta-base-sentiment-latest"
+    # Adding accelerator="onnxruntime" forces the CPU to use optimized C++ pathways
+
+    return pipeline(
+        "text-classification",
+        model=model_name,
+        tokenizer=model_name,
+        export=True,                    # Dynamically converts the model to ONNX structure
+        accelerator="onnxruntime",       # Leverages Intel CPU hardware optimizations
+        return_all_scores=True,  # Pulls the raw mathematical decimal probabilities
+        model_kwargs={"cache_dir": MODEL_CACHE_DIR}  # Pins the files safely to your folder
+    )
+
 
 # ----------------------------------------------------
 # Helper Functions for Analysis
@@ -33,11 +63,50 @@ def analyze_vader(text):
     else:
         return "Neutral", score
 
+def analyze_transformer(text):
+    """
+    Executes deep learning textual evaluation on your CPU.
+    Calculates a continuous polarity index ranging from -1.0 to 1.0.
+    """
+    if not text.strip():
+        return "Neutral", 0.0
+
+    # Lazy-load pipeline right at the moment of execution
+    classifier = load_transformer_pipeline()
+    
+    # AFTER (Safely clips long texts to prevent tensor memory overflows)
+    # predictions = classifier(text)
+    predictions = classifier(
+        text, 
+        truncation=True, 
+        max_length=256
+    )
+        
+    # Map predictions back to clean variable labels
+    scores = {pred['label'].lower(): pred['score'] for pred in predictions}
+    pos_score = scores.get('positive', 0.0)
+    neg_score = scores.get('negative', 0.0)
+    
+    # Calculate a precise, calibrated continuous metric balance index (-1.0 to 1.0)
+    compound_score = pos_score - neg_score
+    
+    # Structural thresholds classification matching your interface specs
+    if compound_score >= 0.05:
+        label = "Positive"
+    elif compound_score <= -0.05:
+        label = "Negative"
+    else:
+        label = "Neutral"
+        
+    return label, compound_score
+
 def get_sentiment(text, engine):
     if engine == "TextBlob":
         return analyze_textblob(text)
     elif engine == "VADER":
         return analyze_vader(text)
+    elif engine == "RoBERTa (Transformer)":
+        return analyze_transformer(text)
 
 # ----------------------------------------------------
 # Streamlit App Layout
@@ -51,7 +120,7 @@ st.markdown("Analyze English text sentiment using **TextBlob** or **VADER** mode
 st.sidebar.header("⚙️ Configuration")
 engine_choice = st.sidebar.selectbox(
     "Choose Sentiment Engine", 
-    ["VADER", "TextBlob"]
+    ["VADER", "TextBlob", "RoBERTa (Transformer)"]
 )
 analysis_mode = st.sidebar.radio("Select Input Mode", ["Single Text Sandbox", "Bulk File Upload"])
 
@@ -59,6 +128,7 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("**Engine Quick Facts:**")
 st.sidebar.write("- **VADER:** Best for social media text, emojis, and short idioms.")
 st.sidebar.write("- **TextBlob:** Fast, rule-based approach for general text.")
+st.sidebar.write("- **RoBERTa (Transformer):** Advanced context engine; handles sarcasm, irony, and passive-aggression.")
 
 # --- MODE 1: SINGLE TEXT SANDBOX ---
 if analysis_mode == "Single Text Sandbox":
@@ -146,87 +216,19 @@ else:
             st.session_state.blanks_df = None
         if "dataset_processed_clicked" not in st.session_state:
             st.session_state.dataset_processed_clicked = False
+        if "last_engine_used" not in st.session_state:
+            st.session_state.last_engine_used = None
 
-        # RESET TRIPPERS: Wipe out stale records and turn off active switch when a new file lands
-        if "last_uploaded_file" not in st.session_state or st.session_state.last_uploaded_file != uploaded_file.name:
+        # RESET TRIPPERS: Wipe out stale records if file or engine choices shift
+        if ("last_uploaded_file" not in st.session_state or 
+            st.session_state.last_uploaded_file != uploaded_file.name or 
+            st.session_state.last_engine_used != engine_choice):
             st.session_state.processed_df = None
             st.session_state.blanks_df = None
             st.session_state.dataset_processed_clicked = False
             st.session_state.last_uploaded_file = uploaded_file.name
+            st.session_state.last_engine_used = engine_choice
 
-        # # --- OPTIMIZED BATCH PROCESSING WITH BLANK EXTRACTION ---
-        # # Evaluate primary button trigger OR preserve open status via the verified click state flag
-        # if st.button("Process Dataset", type="primary") or st.session_state.dataset_processed_clicked:
-        #     st.session_state.dataset_processed_clicked = True
-
-        #     # FIX: Normalize text and explicitly catch 'nan' strings alongside placeholders
-        #     clean_series = raw_df[text_column].astype(str).str.strip().str.lower()
-
-        #     # 1. Identify rows where the text column is blank, NaN, or just whitespace
-        #     is_blank_mask = (
-        #         raw_df[text_column].isna() | 
-        #         (clean_series == "") |
-        #         clean_series.isin(["na", "n/a", "null","nan"]) |
-        #         clean_series.str.startswith("#")  # Catches #NAME?, #VALUE!, etc.
-        #         )
-            
-        #     # 2. Split into two separate DataFrames
-        #     blanks_df = raw_df[is_blank_mask].reset_index(drop=True)
-        #     df_clean = raw_df[~is_blank_mask].reset_index(drop=True)
-            
-        #     # Save the blanks dataframe to session state so you can use it elsewhere
-        #     st.session_state.blanks_df = blanks_df
-            
-        #     total_docs = len(df_clean)
-        #     total_blanks = len(blanks_df)
-            
-        #     if total_docs == 0:
-        #         st.warning("The selected column has no valid text data to process.")
-        #         if total_blanks > 0:
-        #             st.info(f"Found {total_blanks} completely blank/invalid rows.")
-        #             st.dataframe(blanks_df, width='stretch')
-        #     else:
-        #         # Inform the user immediately about the split distribution and add an interactive preview counter
-        #         if total_blanks > 0:
-        #             st.warning(f"📊 Found {total_blanks} blank/invalid rows. Moving them to a separate isolated dataframe to protect model accuracy.")
-        #             with st.expander(f"👀 Quick View Isolated Blanks (Total: {total_blanks})", expanded=False):
-        #                 blank_preview_rows = st.number_input(
-        #                     "Rows of blank data to preview:", 
-        #                     min_value=1, 
-        #                     max_value=total_blanks, 
-        #                     value=min(10, total_blanks), 
-        #                     key="process_blank_preview_counter"
-        #                 )
-        #                 # FIXED: Reads directly from stored state array to guarantee interface stability
-        #                 st.dataframe(st.session_state.blanks_df.head(blank_preview_rows), width='stretch')
-
-        #         progress_bar = st.progress(0)
-        #         status_text = st.empty()
-                
-        #         text_data = df_clean[text_column].astype(str).tolist()
-        #         all_labels, all_scores = [], []
-                
-        #         batch_size = 2000
-        #         num_batches = int(np.ceil(total_docs / batch_size))
-                
-        #         # GUARD RAIL: Run heavy iteration sequence only if cached array evaluation returns clean
-        #         if st.session_state.processed_df is None:
-        #             for i in range(num_batches):
-        #                 batch = text_data[i*batch_size : (i+1)*batch_size]
-        #                 for text in batch:
-        #                     label, score = get_sentiment(text, engine_choice)
-        #                     all_labels.append(label)
-        #                     all_scores.append(score)
-                        
-        #                 progress_bar.progress((i + 1) / num_batches)
-        #                 status_text.text(f"Processed {min((i+1)*batch_size, total_docs)} of {total_docs} valid text rows...")
-                    
-        #             df_clean['Sentiment_Label'] = all_labels
-        #             df_clean['Sentiment_Score'] = all_scores
-        #             st.session_state.processed_df = df_clean
-                
-        #         progress_bar.empty()
-        #         status_text.empty()
 
         # --- NEW: CLEAR BULK ANALYSIS CALLBACK ---
         def clear_bulk_analysis():
@@ -291,34 +293,65 @@ else:
                         # FIXED: Reads directly from stored state array to guarantee interface stability
                         st.dataframe(st.session_state.blanks_df.head(blank_preview_rows), width='stretch')
 
-                progress_bar = st.progress(0)
-                status_text = st.empty()
+                # progress_bar = st.progress(0)
+                # status_text = st.empty()
                 
+                # --- ROW-BY-ROW PROGRESS INITIALIZATION ---
+                progress_bar = st.progress(0.0)
+                status_text = st.empty()
+
                 text_data = df_clean[text_column].astype(str).tolist()
                 all_labels, all_scores = [], []
                 
-                batch_size = 2000
-                num_batches = int(np.ceil(total_docs / batch_size))
+                # batch_size = 2000
+                # num_batches = int(np.ceil(total_docs / batch_size))
                 
+                # # GUARD RAIL: Run heavy iteration sequence only if cached array evaluation returns clean
+                # if st.session_state.processed_df is None:
+                #     for i in range(num_batches):
+                #         batch = text_data[i*batch_size : (i+1)*batch_size]
+                #         for text in batch:
+                #             label, score = get_sentiment(text, engine_choice)
+                #             all_labels.append(label)
+                #             all_scores.append(score)
+                        
+                #         progress_bar.progress((i + 1) / num_batches)
+                #         status_text.text(f"Processed {min((i+1)*batch_size, total_docs)} of {total_docs} valid text rows...")
+                    
+                #     df_clean['Sentiment_Label'] = all_labels
+                #     df_clean['Sentiment_Score'] = all_scores
+                #     st.session_state.processed_df = df_clean
+                
+                # progress_bar.empty()
+                # status_text.empty()
+
                 # GUARD RAIL: Run heavy iteration sequence only if cached array evaluation returns clean
                 if st.session_state.processed_df is None:
-                    for i in range(num_batches):
-                        batch = text_data[i*batch_size : (i+1)*batch_size]
-                        for text in batch:
-                            label, score = get_sentiment(text, engine_choice)
-                            all_labels.append(label)
-                            all_scores.append(score)
+                    for idx, text in enumerate(text_data):
+                        current_row = idx + 1
+                        row_percentage = float(current_row / total_docs)
                         
-                        progress_bar.progress((i + 1) / num_batches)
-                        status_text.text(f"Processed {min((i+1)*batch_size, total_docs)} of {total_docs} valid text rows...")
+                        # Real-time message update
+                        status_text.markdown(f"🧠 **Active Engine:** `{engine_choice}` | 📊 **Progress:** Evaluating row **{current_row:,}** of **{total_docs:,}**")
+                        progress_bar.progress(row_percentage)
+                        
+                        # CRITICAL SCREEN-REFRESH FIX: Briefly pause the CPU math thread 
+                        # to force Streamlit to push the progress percentages to the browser window.
+                        if engine_choice == "RoBERTa (Transformer)":
+                            time.sleep(0.001)
+                        
+                        # Execute sentiment mapping
+                        label, score = get_sentiment(text, engine_choice)
+                        all_labels.append(label)
+                        all_scores.append(score)
                     
                     df_clean['Sentiment_Label'] = all_labels
                     df_clean['Sentiment_Score'] = all_scores
                     st.session_state.processed_df = df_clean
                 
+                # Clean up loading elements upon completion
                 progress_bar.empty()
                 status_text.empty()
-
 
         # Load metrics, plots, and data explorer only if data is processed
         if st.session_state.processed_df is not None:

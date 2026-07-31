@@ -7,3 +7,5 @@ data/*.csv
 *.xlsx
 
 run_app.py
+
+local_transformer_cache/
