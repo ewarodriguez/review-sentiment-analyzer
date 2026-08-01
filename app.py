@@ -255,13 +255,22 @@ else:
             # FIX: Normalize text and explicitly catch 'nan' strings alongside placeholders
             clean_series = raw_df[text_column].astype(str).str.strip().str.lower()
 
-            # 1. Identify rows where the text column is blank, NaN, or just whitespace
+            excel_errors_complete = [
+                "#####", "#DIV/0!", "#N/A", "#NAME?", "#NULL!", 
+                "#NUM!", "#REF!", "#SPILL!", "#VALUE!", "#CALC!", 
+                "#FIELD!", "#PYTHON!", "#BLOCKED", "#CONNECT!", "#BUSY!"
+            ]
+            
+            # Lowercase the master error list so it matches clean_series accurately
+            excel_errors_lower = [err.lower() for err in excel_errors_complete]
+
+            # 1. Identify rows where the text column is blank, NaN, or contains placeholder/Excel errors
             is_blank_mask = (
                 raw_df[text_column].isna() | 
                 (clean_series == "") |
-                clean_series.isin(["na", "n/a", "null","nan"]) |
-                clean_series.str.startswith("#")  # Catches #NAME?, #VALUE!, etc.
-                )
+                clean_series.isin(["na", "n/a", "null", "nan"]) |
+                clean_series.isin(excel_errors_lower)  # Precisely matches only the 15 valid Excel errors
+            )
             
             # 2. Split into two separate DataFrames
             blanks_df = raw_df[is_blank_mask].reset_index(drop=True)
