@@ -34,11 +34,13 @@ The comprehensive open-source review matrix can be explored, audited, and downlo
 
 This system operates entirely in **Python** using clean execution utilities managed via modern project dependency workflows (such as `uv` or `pip`).
 
-*   **Streamlit**: Front-end engine and reactive visual component framework.
-*   **Pandas & NumPy**: Optimized dataframe vectorized slicing and batch matrix calculations.
-*   **VADER Sentiment & TextBlob**: Lexical dictionary evaluation libraries.
-*   **Plotly Express**: Fully scalable interactive vector graphics.
-*   **WordCloud & Matplotlib**: Theme keyword frequencies and image rendering engines.
+* **Transformers (Hugging Face)**: Machine learning framework hosting the RoBERTa architecture for deep-learning sentiment classification.
+* **PyTorch**: Direct execution backend managing neural network tensor calculations and hardware acceleration.
+* **Streamlit**: Front-end engine and reactive visual component framework.
+* **VADER Sentiment & TextBlob**: Lexical dictionary evaluation libraries used as rule-based baseline benchmarks.
+* **Pandas & NumPy**: Optimized dataframe vectorized slicing and batch matrix calculations.
+* **Plotly Express**: Fully scalable interactive vector graphics.
+* **WordCloud & Matplotlib**: Theme keyword frequencies and image rendering engines.
 
 ---
 
