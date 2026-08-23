@@ -1,6 +1,6 @@
 # 📊 Multi-Engine Review Sentiment Analyzer 
 
-An interactive **Streamlit** web application designed to evaluate and audit English text dynamically using **VADER** and **TextBlob** evaluation engines. This application provides dual computational pipelines for isolated sandboxing and industrial-scale bulk file processing.
+An interactive **Streamlit** web application designed to evaluate and audit English text dynamically using **VADER** and **TextBlob** and **RoBERTa** evaluation engines. This application provides dual computational pipelines for isolated sandboxing and industrial-scale bulk file processing.
 
 **Target Application Context**: User feedback and reviews. 
 ---
@@ -19,6 +19,7 @@ The comprehensive open-source review matrix can be explored, audited, and downlo
 *   **Dual Sentiment Calculators**: Swap between rule-based lexical models natively on the fly:
     *   **VADER**: Explicitly optimized for social media nuances, acronyms, capitalization weights, and emoji sentiment values.
     *   **TextBlob**: A fast, rule-based approach optimized for formal prose, general content, and long-form reviews.
+    *   **RoBERTa**: A powerful, transformer-based deep learning model optimized for capturing deep contextual relationships, sarcasm, and complex linguistic nuances in text.
 *   **📝 Try-It-Yourself Sandbox**: Instantly evaluate single blocks of text, generate color-coded visual metrics cards, and clear your active scratchpad workspace with a single click.
 *   **📁 Bulk File Upload**: Ingest and process high-volume `CSV` and `XLSX` (Excel) formatted files natively using highly computational batched streaming pipelines.
 *   **👀 Dataset Previews**: Configure explicit visibility limits to peek inside your raw documents before running complex natural language pipelines.
