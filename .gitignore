@@ -11,3 +11,12 @@ run_app.py
 local_transformer_cache/
 
 .devcontainer
+
+# Ignore specific Docker files
+Dockerfile
+docker-compose.yml
+docker-compose.override.yml
+.dockerignore
+
+# Ignore an entire folder containing Docker configs (if applicable)
+docker/
