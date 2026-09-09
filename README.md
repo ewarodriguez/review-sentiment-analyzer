@@ -22,7 +22,7 @@ The comprehensive open-source review matrix can be explored, audited, and downlo
     *   **RoBERTa**: A powerful, transformer-based deep learning model optimized for capturing deep contextual relationships, sarcasm, and complex linguistic nuances in text.
 *   **📝 Try-It-Yourself Sandbox**: Instantly evaluate single blocks of text, generate color-coded visual metrics cards, and clear your active scratchpad workspace with a single click.
 *   **📁 Bulk File Upload**: Ingest and process high-volume `CSV` and `XLSX` (Excel) formatted files natively using highly computational batched streaming pipelines.
-*   **👀 Dataset Previews**: Configure explicit visibility limits to peek inside your raw documents before running complex natural language pipelines.
+*   **👀 Dataset Preview**: Configure explicit visibility limits to peek inside your raw documents before running complex natural language pipelines.
 *   **⚠️ Automatic Ghost & Blank Row Isolation**: Isolate messy data files. The pipeline strips completely empty spreadsheet cells, filters system parsing artifacts (`NA`, `N/A`, `null`), and partitions blanks into an isolated verification table to guarantee your data indices remain completely mathematically unbiased.
 *   **📈 High-Impact Data Highlights**: Instantly generate key distribution indicators including **Total Dataset Volume**, **Average Sentiment Score**, and a **Net Sentiment Dominance Index**.
 *   **📊 Data Visualizations**: Render crisp high-resolution Plotly Pie Charts, Polar Spread Histograms, and multi-threaded, side-by-side positive and negative theme **Word Clouds**.

@@ -20,3 +20,5 @@ docker-compose.override.yml
 
 # Ignore an entire folder containing Docker configs (if applicable)
 docker/
+
+.hf_cache

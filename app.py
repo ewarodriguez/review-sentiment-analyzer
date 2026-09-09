@@ -113,8 +113,8 @@ def get_sentiment(text, engine):
 # ----------------------------------------------------
 st.set_page_config(page_title="Multi-Engine Review Sentiment Analyzer", layout="wide")
 
-st.title("📊 Multi-Engine Review Sentiment Analyzer")
-st.markdown("Analyze English text sentiment using **TextBlob** or **VADER** models.")
+st.title("🎭 Multi-Engine Review Sentiment Analyzer")
+st.markdown("Analyze English text sentiment using **TextBlob**, **VADER**, or **RoBERTa** models.")
 
 # --- SIDEBAR CONTROLS ---
 st.sidebar.header("⚙️ Configuration")
@@ -132,7 +132,7 @@ st.sidebar.write("- **RoBERTa (Transformer):** Advanced context engine; handles 
 
 # --- MODE 1: SINGLE TEXT SANDBOX ---
 if analysis_mode == "Single Text Sandbox":
-    st.subheader("📝 Try-It-Yourself Sandbox")
+    st.subheader("📦 Try-It-Yourself Sandbox")
     
     # Initialize session state variable for text sandbox if it doesn't exist
     if "sandbox_text" not in st.session_state:
@@ -193,7 +193,8 @@ else:
                 raw_df[col] = raw_df[col].fillna("").astype(str)
 
         # --- NEW: DATA SET PREVIEW MODULE ---
-        with st.expander("👀 Preview Uploaded Dataset", expanded=True):
+        st.markdown("<br>", unsafe_allow_html=True) # Adds a clean HTML line break
+        with st.expander("👀 Dataset Preview", expanded=True):
             max_rows = len(raw_df)
             # Default preview to 5 rows, capped between 1 and total available rows
             preview_rows = st.number_input(
@@ -207,6 +208,7 @@ else:
             st.caption(f"Showing top {preview_rows} of {max_rows:,} total rows.")
             
         # Let user choose which column contains the text
+        st.markdown("<br>", unsafe_allow_html=True) # Adds a clean HTML line break
         text_column = st.selectbox("Select the column containing the text data:", raw_df.columns)
         
         # Initialize session state tracking variables safely
@@ -245,7 +247,8 @@ else:
         with bulk_col1:
             process_btn = st.button("Process Dataset", type="primary")
         with bulk_col2:
-            st.button("Clear Processing", type="secondary", on_click=clear_bulk_analysis)
+            st.button("Clear Processed Data", type="secondary", on_click=clear_bulk_analysis)
+        st.markdown("<br>", unsafe_allow_html=True) # Adds a clean HTML line break
 
         # --- OPTIMIZED BATCH PROCESSING WITH BLANK EXTRACTION ---
         # Evaluate primary button trigger OR preserve open status via the verified click state flag
@@ -290,8 +293,8 @@ else:
             else:
                 # Inform the user immediately about the split distribution and add an interactive preview counter
                 if total_blanks > 0:
-                    st.warning(f"📊 Found {total_blanks} blank/invalid rows. Moving them to a separate isolated dataframe to protect model accuracy.")
-                    with st.expander(f"👀 Quick View Isolated Blanks (Total: {total_blanks})", expanded=False):
+                    st.warning(f"⚠️ Found {total_blanks} blank/invalid rows. Moving them to a separate isolated dataframe to protect model accuracy.")
+                    with st.expander(f"👀 Preview of Isolated Blank/Invalid Rows (Total: {total_blanks})", expanded=False):
                         blank_preview_rows = st.number_input(
                             "Rows of blank data to preview:", 
                             min_value=1, 
@@ -341,7 +344,7 @@ else:
                         row_percentage = float(current_row / total_docs)
                         
                         # Real-time message update
-                        status_text.markdown(f"🧠 **Active Engine:** `{engine_choice}` | 📊 **Progress:** Evaluating row **{current_row:,}** of **{total_docs:,}**")
+                        status_text.markdown(f"💻⚙️ **Active Engine:** `{engine_choice}` | ⏳**Progress:** Evaluating row **{current_row:,}** of **{total_docs:,}**")
                         progress_bar.progress(row_percentage)
                         
                         # CRITICAL SCREEN-REFRESH FIX: Briefly pause the CPU math thread 
@@ -368,7 +371,8 @@ else:
             total_docs = len(df)
             
             # 1. KPI Metrics Rows
-            st.markdown("### 📈 Dataset Highlights")
+            st.markdown("<br>", unsafe_allow_html=True) # Adds a clean HTML line break
+            st.markdown("### 📊 Sentiment Analysis Metrics")
             
             # Calculate explicit counts for the metrics
             pos_count = (df['Sentiment_Label'] == 'Positive').sum()
@@ -394,34 +398,56 @@ else:
 
             # Row 1: Volume & Breakdown Counts
             row1_col1, row1_col2, row1_col3 = st.columns(3)
-            row1_col1.metric("Total Rows Processed", f"{total_docs:,}")
-            row1_col2.metric("Average Sentiment Score", f"{avg_score:.2f}", help=avg_help_text)
-            row1_col3.metric("Net Sentiment Score", f"{net_sentiment:.1f}%", help=net_help_text)
+
+            with row1_col1:
+                with st.container(border=True):
+                    st.metric("Total Rows Processed", f"{total_docs:,}")
+
+            with row1_col2:
+                with st.container(border=True):
+                    st.metric("Average Sentiment Score", f"{avg_score:.2f}", help=avg_help_text)
+
+            with row1_col3:
+                with st.container(border=True):
+                    st.metric("Net Sentiment Score", f"{net_sentiment:.1f}%", help=net_help_text)
             
             # Row 2: Neutral Volume & Core Indices
             row2_col1, row2_col2, row2_col3 = st.columns(3)
-            row2_col1.metric("Rows with POSITIVE Sentiment", f"{pos_count:,}")
-            row2_col2.metric("Rows with NEGATIVE Sentiment", f"{neg_count:,}")
-            row2_col3.metric("Rows with NEUTRAL Sentiment", f"{neu_count:,}")
+
+            with row2_col1:
+                with st.container(border=True):
+                    st.metric("Rows with POSITIVE Sentiment", f"{pos_count:,}")
+
+            with row2_col2:
+                with st.container(border=True):
+                    st.metric("Rows with NEGATIVE Sentiment", f"{neg_count:,}")
+
+            with row2_col3:
+                with st.container(border=True):
+                    st.metric("Rows with NEUTRAL Sentiment", f"{neu_count:,}")
 
             # 2. Main High-Level Visualizations
-            st.markdown("### 📊 Distribution Plots")
+            st.markdown("<br>", unsafe_allow_html=True) # Adds a clean HTML line break
+            st.markdown("### 📶 Distribution Plots")
             chart_col1, chart_col2 = st.columns(2)
             
             with chart_col1:
-                fig_pie = px.pie(df, names='Sentiment_Label', title='Overall Sentiment Breakdown',
-                                 color='Sentiment_Label', 
-                                 color_discrete_map={'Positive':'#2ecc71', 'Negative':'#e74c3c', 'Neutral':'#f1c40f'})
-                st.plotly_chart(fig_pie, width='stretch')
-                
+                with st.container(border=True):    
+                    fig_pie = px.pie(df, names='Sentiment_Label', title='Overall Sentiment Breakdown',
+                                    color='Sentiment_Label', 
+                                    color_discrete_map={'Positive':'#2ecc71', 'Negative':'#e74c3c', 'Neutral':'#f1c40f'})
+                    st.plotly_chart(fig_pie, width='stretch')
+                    
             with chart_col2:
-                fig_hist = px.histogram(df, x='Sentiment_Score', nbins=20, 
-                                        title='Detailed Sentiment Polarity Spread',
-                                        labels={'Sentiment_Score': 'Polarity Rating (-1 to +1)'},
-                                        color_discrete_sequence=['#3498db'])
-                st.plotly_chart(fig_hist, width='stretch')
+                with st.container(border=True):
+                    fig_hist = px.histogram(df, x='Sentiment_Score', nbins=20, 
+                                            title='Detailed Sentiment Polarity Spread',
+                                            labels={'Sentiment_Score': 'Polarity Rating (-1 to +1)'},
+                                            color_discrete_sequence=['#3498db'])
+                    st.plotly_chart(fig_hist, width='stretch')
 
             # 3. Text and Topic Insights (Side-by-Side Wordclouds)
+            st.markdown("<br>", unsafe_allow_html=True) # Adds a clean HTML line break
             st.markdown("### ☁️ Theme Wordclouds")
             
             pos_words = " ".join(df[df['Sentiment_Label'] == 'Positive'][text_column].astype(str))
@@ -466,7 +492,8 @@ else:
                     st.info("No negative words detected.")
 
 
-            # 4. Interactive Filtered Raw Data Explorer
+            # 4. Interactive Filtered Raw Data 
+            st.markdown("<br>", unsafe_allow_html=True) # Adds a clean HTML line break
             st.markdown("### 🔍 Raw Data Audit Trail")
 
             # Interactive Filter Elements
@@ -491,10 +518,22 @@ else:
             st.caption(f"Showing {len(filtered_df):,} of {len(df):,} records")
             st.dataframe(filtered_df[[text_column, 'Sentiment_Label', 'Sentiment_Score']], width='stretch')
 
-            # # 4. Interactive Raw Data Explorer
-            # st.markdown("### 🔍 Raw Data Audit Trail")
-            # st.dataframe(df[[text_column, 'Sentiment_Label', 'Sentiment_Score']], width='stretch')
-
-
-
+#NEW
+            # 4. Convert the mapped dataframe to CSV string data
+            csv_data = filtered_df.to_csv(index=True, index_label="Index").encode('utf-8')
+            
+            # Fetch and format the current date (YYYY-MM-DD)
+            from datetime import datetime, timezone
+            current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+            print(current_date)
+            # Output example: 2026-09-10 13:41:00 UTC
+            
+            st.download_button(
+                label="📥 Download Full Sentiment Analysis File (CSV)",
+                data=csv_data,
+                file_name=f"sentiment_analysis_{current_date}.csv",
+                mime="text/csv",
+                key="download-analysis-csv",
+                on_click="ignore"  # Keeps the action purely frontend to bypass script executions entirely
+            )
 
