@@ -149,9 +149,9 @@ if analysis_mode == "Single Text Sandbox":
     btn_col1, btn_col2 = st.columns([1, 10])
     
     with btn_col1:
-        analyze_clicked = st.button("Analyze Text", type="primary")
+        analyze_clicked = st.button("Analyze Text", type="primary",wrap=True)
     with btn_col2:
-        st.button("Clear Text", type="secondary", on_click=clear_text)
+        st.button("Clear Text", type="secondary", on_click=clear_text,wrap=True)
         
     if analyze_clicked:
         if user_text.strip() == "":
@@ -245,9 +245,9 @@ else:
         bulk_col1, bulk_col2 = st.columns([1, 10])
         
         with bulk_col1:
-            process_btn = st.button("Process Dataset", type="primary")
+            process_btn = st.button("Process Data", type="primary",wrap=True)
         with bulk_col2:
-            st.button("Clear Processed Data", type="secondary", on_click=clear_bulk_analysis)
+            st.button("Clear Processed Data", type="secondary", on_click=clear_bulk_analysis,wrap=True)
         st.markdown("<br>", unsafe_allow_html=True) # Adds a clean HTML line break
 
         # --- OPTIMIZED BATCH PROCESSING WITH BLANK EXTRACTION ---
@@ -494,7 +494,9 @@ else:
 
             # 4. Interactive Filtered Raw Data 
             st.markdown("<br>", unsafe_allow_html=True) # Adds a clean HTML line break
-            st.markdown("### 🔍 Raw Data Audit Trail")
+            st.markdown("### 👀 Quick Preview: Sentiment Analysis Results")
+            st.caption("💡 **Tip:** You may filter by Sentiment Label or by entering keywords in the input box")        
+
 
             # Interactive Filter Elements
             filter_col1, filter_col2 = st.columns([1, 2])
