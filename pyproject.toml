@@ -4,19 +4,16 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
+
+# 1. RUNTIME DEPENDENCIES (These go into your final app)
 dependencies = [
-    "ipykernel>=7.2.0",
-    "jinja2>=3.1.6",
-    "lingua-language-detector>=2.2.0",
+    "matplotlib>=3.11.1",
     "numpy>=2.4.4",
     "onnxruntime>=1.28.0",
     "openpyxl>=3.1.5",
     "optimum[onnxruntime]>=1.17.1",
-    "pandarallel>=1.6.5",
     "pandas>=3.0.2",
-    "pip>=26.0.1",
     "plotly>=6.8.0",
-    "pyinstaller>=6.21.0",
     "streamlit>=1.58.0",
     "textblob>=0.20.0",
     "torch>=2.12.1",
@@ -24,4 +21,31 @@ dependencies = [
     "transformers>=5.12.1",
     "vadersentiment>=3.3.2",
     "wordcloud>=1.9.6",
+
 ]
+
+# 2. DEVELOPMENT DEPENDENCIES (These are left behind)
+[dependency-groups]
+dev = [
+    "ipykernel>=7.2.0",
+    "jinja2>=3.1.6",
+    "lingua-language-detector>=2.2.0",
+    "pip>=26.0.1",
+    "pyinstaller>=6.21.0",
+    "pandarallel>=1.6.5",
+
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" }
+]
+torchvision = [
+    { index = "pytorch-cpu" }
+]
+

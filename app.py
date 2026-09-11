@@ -372,7 +372,7 @@ else:
             
             # 1. KPI Metrics Rows
             st.markdown("<br>", unsafe_allow_html=True) # Adds a clean HTML line break
-            st.markdown("### 📊 Sentiment Analysis Metrics")
+            st.markdown("### 📊 Key Metrics")
             
             # Calculate explicit counts for the metrics
             pos_count = (df['Sentiment_Label'] == 'Positive').sum()
@@ -428,7 +428,7 @@ else:
 
             # 2. Main High-Level Visualizations
             st.markdown("<br>", unsafe_allow_html=True) # Adds a clean HTML line break
-            st.markdown("### 📶 Distribution Plots")
+            st.markdown("### 📶 Data Distribution")
             chart_col1, chart_col2 = st.columns(2)
             
             with chart_col1:
@@ -448,7 +448,7 @@ else:
 
             # 3. Text and Topic Insights (Side-by-Side Wordclouds)
             st.markdown("<br>", unsafe_allow_html=True) # Adds a clean HTML line break
-            st.markdown("### ☁️ Theme Wordclouds")
+            st.markdown("### ☁️ Top Themes")
             
             pos_words = " ".join(df[df['Sentiment_Label'] == 'Positive'][text_column].astype(str))
             neg_words = " ".join(df[df['Sentiment_Label'] == 'Negative'][text_column].astype(str))
@@ -456,7 +456,7 @@ else:
             wc_col1, wc_col2 = st.columns(2)
 
             with wc_col1:
-                st.write("**Positive Themes**")
+                st.write("**POSITIVE Themes**")
                 if len(pos_words.strip()) > 0:
                     wc_pos = WordCloud(width=400, height=250, background_color='white', colormap='Greens')
                     pos_frequencies = wc_pos.process_text(pos_words)
@@ -474,7 +474,7 @@ else:
                     st.info("No positive words detected.")
                     
             with wc_col2:
-                st.write("**Negative Themes**")
+                st.write("**NEGATIVE Themes**")
                 if len(neg_words.strip()) > 0:
                     wc_neg = WordCloud(width=400, height=250, background_color='white', colormap='Reds')
                     neg_frequencies = wc_neg.process_text(neg_words)
