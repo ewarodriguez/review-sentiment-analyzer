@@ -1,0 +1,64 @@
+name: sentiment_analysis_tool
+
+services:
+  classification-app:
+    build:
+      context: .
+    image: img_sentiment_analysis:latest
+    container_name: cont_sentiment_analysis
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+      # PROTECTS the virtual environment from being overwritten by your local files
+      - /app/.venv/
+      # PERSISTS ML models on your host machine so they don't bloat the container
+      - hf-cache:/home/nonroot/.cache/huggingface
+    environment:
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_FILE_WATCHER_TYPE=poll
+      # FIX: Routes Hugging Face safely to the authorized nonroot home path
+      - HF_HOME=/home/nonroot/.cache/huggingface
+      # FIX: Silences warnings by cleanly routing the Matplotlib sandbox to /tmp
+      - MPLCONFIGDIR=/tmp/matplotlib
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  hf-cache:
+
+
+
+# name: sentiment_analysis_tool
+
+# services:
+#   classification-app:
+#     build:
+#       context: .
+#     image: img_sentiment_analysis:latest
+#     container_name: cont_sentiment_analysis
+#     ports:
+#       - "8501:8501"
+#     volumes:
+#       - .:/app
+#       # PROTECTS the virtual environment from being overwritten by your local files
+#       - /app/.venv/
+#       # PROTECTS the container-side config theme from being overridden or missing locally
+#       - /app/.streamlit/config.toml
+#       # PERSISTS ML models on your host machine so they don't bloat the container
+#       - hf-cache:/root/.cache/huggingface
+#     environment:
+#       - STREAMLIT_SERVER_HEADLESS=true
+#       - STREAMLIT_SERVER_FILE_WATCHER_TYPE=poll
+#       - HF_HOME=/root/.cache/huggingface
+#     logging:
+#       driver: "json-file"
+#       options:
+#         max-size: "10m"
+#         max-file: "3"
+
+# volumes:
+#   hf-cache:

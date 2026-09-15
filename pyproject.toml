@@ -41,11 +41,8 @@ name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
+# FIXED SYNTAX: Forces mapping as a direct object lookup
 [tool.uv.sources]
-torch = [
-    { index = "pytorch-cpu" }
-]
-torchvision = [
-    { index = "pytorch-cpu" }
-]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
 

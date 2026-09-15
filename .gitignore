@@ -13,12 +13,11 @@ local_transformer_cache/
 .devcontainer
 
 # Ignore specific Docker files
-Dockerfile
-docker-compose.yml
-docker-compose.override.yml
-.dockerignore
+# Dockerfile
+# docker-compose.yml
+# .dockerignore
 
 # Ignore an entire folder containing Docker configs (if applicable)
-docker/
+# docker/
 
 .hf_cache
